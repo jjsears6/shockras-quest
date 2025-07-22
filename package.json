@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "react": "18.0.0",
+    "react-dom": "18.0.0",
+    "homepage": "https://jjsears6.github.io/shockras-quest",
+      "scripts": {
+          "predeploy": "npm run build",
+          "deploy": "gh-pages -d build"
+        }
+  }
+}
