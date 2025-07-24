@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=0.8, user-scalable=yes">
     <title>Quantum Protocol Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -27,8 +27,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            padding: 10px;
             min-height: 100vh;
+            touch-action: none; /* Prevent default touch behaviors */
         }
         
         .title {
@@ -53,6 +54,35 @@
             background: #000011;
             position: relative;
             padding: 0;
+            touch-action: none; /* Prevent scrolling on game board */
+            user-select: none; /* Prevent text selection */
+        }
+        
+        .mobile-instructions {
+            display: none;
+            text-align: center;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            color: #00ffff;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2rem;
+            }
+            
+            .level-info {
+                font-size: 0.9rem;
+            }
+            
+            .mobile-instructions {
+                display: block;
+            }
+            
+            .controls {
+                font-size: 0.9rem;
+            }
         }
         
         .controls {
@@ -109,6 +139,8 @@
             const [playerLevel, setPlayerLevel] = useState(0);
             const [animationFrame, setAnimationFrame] = useState(0);
             const [totalChipsEver, setTotalChipsEver] = useState(0);
+            const [touchStart, setTouchStart] = useState(null);
+            const [touchEnd, setTouchEnd] = useState(null);
 
             // Level designs
             const levels = [
@@ -233,14 +265,60 @@
                 });
             }, [playerPos, bots]);
 
-            const handleKeyPress = useCallback((e) => {
+            // Touch/swipe handling
+            const minSwipeDistance = 50;
+
+            const onTouchStart = (e) => {
+                setTouchEnd(null);
+                setTouchStart({
+                    x: e.targetTouches[0].clientX,
+                    y: e.targetTouches[0].clientY
+                });
+            };
+
+            const onTouchMove = (e) => {
+                setTouchEnd({
+                    x: e.targetTouches[0].clientX,
+                    y: e.targetTouches[0].clientY
+                });
+            };
+
+            const onTouchEnd = () => {
+                if (!touchStart || !touchEnd) return;
+                
+                const distanceX = touchStart.x - touchEnd.x;
+                const distanceY = touchStart.y - touchEnd.y;
+                const isLeftSwipe = distanceX > minSwipeDistance;
+                const isRightSwipe = distanceX < -minSwipeDistance;
+                const isUpSwipe = distanceY > minSwipeDistance;
+                const isDownSwipe = distanceY < -minSwipeDistance;
+
+                // Determine which direction had the greater distance
+                if (Math.abs(distanceX) > Math.abs(distanceY)) {
+                    // Horizontal swipe
+                    if (isLeftSwipe) {
+                        handleMovement('ArrowLeft');
+                    } else if (isRightSwipe) {
+                        handleMovement('ArrowRight');
+                    }
+                } else {
+                    // Vertical swipe
+                    if (isUpSwipe) {
+                        handleMovement('ArrowUp');
+                    } else if (isDownSwipe) {
+                        handleMovement('ArrowDown');
+                    }
+                }
+            };
+
+            const handleMovement = (direction) => {
                 if (gameState !== 'playing') {
-                    if (e.key === ' ' && gameState === 'won') {
+                    if (direction === 'Space' && gameState === 'won') {
                         if (currentLevel < levels.length - 1) {
                             setCurrentLevel(prev => prev + 1);
                             setPlayerLevel(prev => prev + 1);
                         }
-                    } else if (e.key === ' ' && gameState === 'dead') {
+                    } else if (direction === 'Space' && gameState === 'dead') {
                         initLevel();
                     }
                     return;
@@ -249,7 +327,7 @@
                 let newX = playerPos.x;
                 let newY = playerPos.y;
 
-                switch(e.key) {
+                switch(direction) {
                     case 'ArrowUp': newY--; break;
                     case 'ArrowDown': newY++; break;
                     case 'ArrowLeft': newX--; break;
@@ -290,6 +368,12 @@
                 if (targetCell === EXIT && chipsCollected + (board[newY][newX] === CHIP ? 1 : 0) >= totalChips) {
                     setGameState('won');
                 }
+            };
+
+            const handleKeyPress = useCallback((e) => {
+                let direction = e.key;
+                if (e.key === ' ') direction = 'Space';
+                handleMovement(direction);
             }, [gameState, playerPos, board, chipsCollected, totalChips, currentLevel, initLevel]);
 
             useEffect(() => {
@@ -585,12 +669,12 @@
             return (
                 <div className="game-container">
                     <div className="level-info">
-                        <h1 className="title">QUANTUM PROTOCOL</h1>
+                        <h1 className="title">SHOCKRA'S SYN3RGY</h1>
                         <div style={{ fontSize: '1.2rem', marginBottom: '5px' }}>
                             LEVEL {currentLevel + 1}: {levels[currentLevel].name}
                         </div>
                         <div style={{ fontSize: '1rem', marginBottom: '5px' }}>
-                            AI CHIPS: {chipsCollected}/{totalChips} | TOTAL COLLECTED: {totalChipsEver}
+                            EN3RGY 0RBS: {chipsCollected}/{totalChips} | TOTAL: {totalChipsEver}
                         </div>
                         <div style={{
                             fontSize: '0.9rem',
@@ -612,6 +696,9 @@
                             border: '2px solid #00ffff',
                             lineHeight: 0
                         }}
+                        onTouchStart={onTouchStart}
+                        onTouchMove={onTouchMove}
+                        onTouchEnd={onTouchEnd}
                     >
                         {board.map((row, y) =>
                             row.map((cell, x) => (
@@ -645,6 +732,10 @@
                         )}
                     </div>
 
+                    <div className="mobile-instructions">
+                        📱 Swipe on the game board to move • Tap anywhere to restart/continue
+                    </div>
+
                     {totalChipsEver > 0 && (
                         <div className="evolution-progress">
                             <div>EVOLUTION PROGRESS:</div>
@@ -664,6 +755,16 @@
         }
 
         ReactDOM.render(React.createElement(GameBoard), document.getElementById('root'));
+        
+        // Add tap-to-continue functionality for mobile game states
+        document.addEventListener('touchend', (e) => {
+            const gameContainer = document.querySelector('.game-container');
+            if (gameContainer && !e.target.closest('.game-board')) {
+                // Only trigger if not swiping on game board
+                const event = new KeyboardEvent('keydown', { key: ' ' });
+                window.dispatchEvent(event);
+            }
+        });
     </script>
 </body>
 </html>
